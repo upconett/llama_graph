@@ -36,8 +36,10 @@ class DBDialog:
 # It contains all the methods to work with SQLite
 
 class Database:
-    def __init__(self, db_file: str):
+    def __init__(self, db_file: str, context_window: int):
         self.file = db_file
+        self.context_window = context_window
+
         self.db = sqlite3.connect(self.file)
         self.update_tables()
         self.db.close()
@@ -127,11 +129,25 @@ class Database:
             await conn.commit()
         
 
-    async def get_context(self, user: AIOgramUser, context_window: int) -> list[DBMessage]:
+    async def get_context(self, user: AIOgramUser) -> list[DBMessage]:
         async with aiosqlite.connect(self.file) as conn:
             dialog_id: int = (await conn.execute_fetchall(
                 f"SELECT active_dialog FROM users WHERE user_id = {user.id};"))[0][0]
             messages: list = await conn.execute_fetchall(
                 ("SELECT * FROM messages "
-                f"WHERE dialog_id={dialog_id} ORDER BY message_id DESC LIMIT {context_window};"))
+                f"WHERE dialog_id={dialog_id} ORDER BY message_id DESC LIMIT {self.context_window};"))
         return [DBMessage(*x) for x in messages[::-1]]
+
+    
+    async def count_messages(self, user: AIOgramUser) -> int:
+        async with aiosqlite.connect(self.file) as conn:
+            dialog_id: int = (await conn.execute_fetchall(
+                f"SELECT active_dialog FROM users WHERE user_id = {user.id};"))[0][0]
+            try:
+                count: int = (await conn.execute_fetchall(
+                    f"SELECT COUNT(message_id) FROM messages WHERE dialog_id = {dialog_id}"))[0][0]
+            except Exception as e:
+                print(e)
+                count = 0
+        return count
+        

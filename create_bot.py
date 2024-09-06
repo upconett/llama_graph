@@ -11,6 +11,12 @@ bot = Bot(
 
 dp = Dispatcher()
 
-llm = LLM(config.LLAMA_IP)
+llm = LLM(
+    config.LLAMA_IP,
+    config.TEMPERATURE
+)
 
-db = Database(config.DB_FILE)
+db = Database(
+    config.DB_FILE,
+    config.CONTEXT_WINDOW
+)
